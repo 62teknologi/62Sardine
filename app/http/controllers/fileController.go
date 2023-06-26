@@ -71,10 +71,13 @@ func ResizeImage(c *gin.Context, fileHeader multipart.FileHeader, width string, 
 		return nil, err
 	}
 
+	fileHeader.Header.Set("Content-Type", "image/jpeg")
+
 	// Create a new multipart.FileHeader for the resized image.
 	resizedFileHeader := &multipart.FileHeader{
 		Filename: tempFileName,
 		Size:     int64(buf.Len()),
+		Header:   fileHeader.Header,
 	}
 
 	return resizedFileHeader, nil
@@ -117,10 +120,13 @@ func CompressImage(fileHeader *multipart.FileHeader, quality string, tempFileNam
 		return nil, err
 	}
 
+	fileHeader.Header.Set("Content-Type", "image/jpeg")
+
 	// Return the compressed image.
 	return &multipart.FileHeader{
 		Filename: tempFileName,
 		Size:     int64(buf.Len()),
+		Header:   fileHeader.Header,
 	}, nil
 }
 
@@ -184,8 +190,6 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 		return
 	}
 
-	contentType := file.Header.Get("Content-Type")
-
 	if ctx.PostForm("resize_width") != "" || ctx.PostForm("resize_height") != "" {
 		name := str.Random(40) + ".jpg"
 		file, err = ResizeImage(ctx, *file, ctx.PostForm("resize_width"), ctx.PostForm("resize_height"), name)
@@ -194,7 +198,6 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 			return
 		}
 		defer os.Remove(name)
-		contentType = "image/jpeg"
 	}
 
 	if ctx.PostForm("compress") != "" {
@@ -205,7 +208,6 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 			return
 		}
 		defer os.Remove(name)
-		contentType = "image/jpeg"
 	}
 
 	c, err := filesystem.NewFileFromRequest(file)
@@ -214,7 +216,7 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 		return
 	}
 
-	fs := filesystem.NewStorage(contentType, ctx.PostForm("visibility"))
+	fs := filesystem.NewStorage(file.Header.Get("Content-Type"), ctx.PostForm("visibility"))
 
 	folder, _ := config.ReadConfig("filesystems.default_folder")
 
