@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/62teknologi/62sardine/app/filesystem"
@@ -190,24 +191,48 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 		return
 	}
 
-	if ctx.PostForm("resize_width") != "" || ctx.PostForm("resize_height") != "" {
-		name := str.Random(40) + ".jpg"
-		file, err = ResizeImage(ctx, *file, ctx.PostForm("resize_width"), ctx.PostForm("resize_height"), name)
-		if err != nil {
-			ctrl.RessErr(ctx, err)
-			return
-		}
-		defer os.Remove(name)
-	}
+	moreInfo := make(map[string]any)
+	contentType := file.Header.Get("Content-Type")
+	if strings.Contains(contentType, "image") {
+		// Open the uploaded file.
+		srcFile, _ := file.Open()
+		defer srcFile.Close()
 
-	if ctx.PostForm("compress") != "" {
-		name := str.Random(40) + ".jpg"
-		file, err = CompressImage(file, ctx.PostForm("compress"), name)
-		if err != nil {
-			ctrl.RessErr(ctx, err)
-			return
+		// Decode the uploaded image.
+		img, _, _ := image.Decode(srcFile)
+		width := img.Bounds().Dx()
+		height := img.Bounds().Dy()
+
+		moreInfo["width"] = width
+		moreInfo["height"] = height
+
+		if ctx.PostForm("resize_width") != "" || ctx.PostForm("resize_height") != "" {
+			name := str.Random(40) + ".jpg"
+			file, err = ResizeImage(ctx, *file, ctx.PostForm("resize_width"), ctx.PostForm("resize_height"), name)
+			if err != nil {
+				ctrl.RessErr(ctx, err)
+				return
+			}
+			defer os.Remove(name)
+
+			if ctx.PostForm("resize_width") != "" {
+				moreInfo["width"] = ctx.PostForm("resize_width")
+			}
+
+			if ctx.PostForm("resize_height") != "" {
+				moreInfo["height"] = ctx.PostForm("resize_height")
+			}
 		}
-		defer os.Remove(name)
+
+		if ctx.PostForm("compress") != "" {
+			name := str.Random(40) + ".jpg"
+			file, err = CompressImage(file, ctx.PostForm("compress"), name)
+			if err != nil {
+				ctrl.RessErr(ctx, err)
+				return
+			}
+			defer os.Remove(name)
+		}
 	}
 
 	c, err := filesystem.NewFileFromRequest(file)
@@ -238,7 +263,7 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 
 		isExist := fs.Exists(fullPath)
 		if isExist {
-			ctrl.RessErr(ctx, errors.New("file aready exist"))
+			ctrl.RessErr(ctx, errors.New("file already exist"))
 			return
 		}
 	}
@@ -275,7 +300,7 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 		fileName = fileName + "." + extension
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
+	responseData := gin.H{
 		"data": map[string]any{
 			"url":                       fs.Url(resultPath),
 			"path":                      resultPath,
@@ -287,8 +312,11 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 			"client_original_extention": c.GetClientOriginalExtension(),
 			"client_original_name":      c.GetClientOriginalName(),
 			"disk":                      defaultDisk,
+			"more_info":                 moreInfo,
 		},
-	})
+	}
+
+	ctx.JSON(http.StatusOK, responseData)
 }
 
 func (ctrl *FileController) Delete(ctx *gin.Context) {
