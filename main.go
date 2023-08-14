@@ -19,6 +19,7 @@ func main() {
 	}
 
 	r := gin.Default()
+	r.Static("/storage", "./storage")
 	r.SetTrustedProxies(nil)
 
 	apiV1 := r.Group("/api/v1")

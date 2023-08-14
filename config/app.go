@@ -81,7 +81,7 @@ func ReadConfig(name string) (string, error) {
 					"local": map[string]any{
 						"driver": "local",
 						"root":   "storage/app",
-						"url":    config.APP_URL + "/storage",
+						"url":    config.APP_URL + "/storage/app",
 					},
 					"s3": map[string]any{
 						"driver":   "s3",
