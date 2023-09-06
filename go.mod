@@ -16,6 +16,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.49
 	github.com/spf13/viper v1.15.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.40
+	github.com/xuri/excelize/v2 v2.8.0
 	google.golang.org/api v0.107.0
 )
 
@@ -84,7 +85,6 @@ require (
 	github.com/ugorji/go/codec v1.2.9 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	github.com/xuri/efp v0.0.0-20230802181842-ad255f2331ca // indirect
-	github.com/xuri/excelize/v2 v2.8.0 // indirect
 	github.com/xuri/nfp v0.0.0-20230819163627-dc951e3ffe1a // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
