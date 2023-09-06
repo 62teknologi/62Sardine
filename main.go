@@ -30,6 +30,7 @@ func main() {
 		r.GET("/files", c.FindAll)
 		r.POST("/files", c.Upload)
 		r.DELETE("/files", c.Delete)
+		r.POST("/export", c.Export)
 		r.GET("/temporary-url", c.TempUrl)
 
 	}

@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"github.com/xuri/excelize/v2"
 	"image"
 	"image/jpeg"
 	"io/ioutil"
@@ -332,6 +334,136 @@ func (ctrl *FileController) Delete(ctx *gin.Context) {
 			"success": true,
 		},
 	})
+}
+
+type ExportRequest struct {
+	FileName  string    `json:"file_name"`
+	SheetName string    `json:"sheet_name"`
+	Headings  []Heading `json:"headings"`
+	Data      []map[string]any
+}
+
+type Heading struct {
+	Field     string `json:"field"`
+	FieldName string `json:"field_name"`
+}
+
+func (ctrl *FileController) Export(ctx *gin.Context) {
+	exportTo := ctx.Query("export_to")
+	if !(exportTo == "xlsx" || exportTo == "csv") {
+		ctrl.RessErr(ctx, errors.New("invalid export type, only support either xlsx or csv"))
+		return
+	}
+
+	var exportRequest ExportRequest
+
+	if err := ctx.BindJSON(&exportRequest); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while get request data: " + err.Error()})
+		return
+	}
+
+	if exportTo == "csv" {
+		// Create a CSV writer.
+		csvFileName := "storage/" + exportRequest.FileName + ".csv"
+		file, err := os.Create(csvFileName)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while create a csv writer"})
+			return
+		}
+		defer file.Close()
+
+		writer := csv.NewWriter(file)
+		defer writer.Flush()
+
+		// Write headings to the CSV file.
+		var headings []string
+		for _, d := range exportRequest.Headings {
+			headings = append(headings, d.FieldName)
+		}
+		if err := writer.Write(headings); err != nil {
+			fmt.Println(err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while write headings to the csv file"})
+			return
+		}
+
+		// Write data to the CSV file.
+		for _, exportData := range exportRequest.Data {
+			var row []string
+			for _, d := range exportRequest.Headings {
+				row = append(row, fmt.Sprintf("%v", exportData[d.Field]))
+			}
+			if err := writer.Write(row); err != nil {
+				fmt.Println(err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while write data to the csv file"})
+				return
+			}
+		}
+	} else if exportTo == "xlsx" {
+		xlsx := excelize.NewFile()
+		defer func() {
+			if err := xlsx.Close(); err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while create new xlsx file"})
+			}
+		}()
+
+		// Create a new sheet.
+		index, err := xlsx.NewSheet(exportRequest.SheetName)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		rowIndex := 1
+		for i, d := range exportRequest.Headings {
+			rowName := string(rune('A' + i))
+			cellName := rowName + strconv.Itoa(rowIndex)
+			xlsx.SetCellValue(exportRequest.SheetName, cellName, d.FieldName)
+			style, _ := xlsx.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+			xlsx.SetCellStyle(exportRequest.SheetName, cellName, cellName, style)
+
+			for exportIteration, exportData := range exportRequest.Data {
+				cellName := rowName + strconv.Itoa(rowIndex+exportIteration+1)
+				// Set value of a cell.
+				xlsx.SetCellValue(exportRequest.SheetName, cellName, exportData[d.Field])
+			}
+		}
+
+		// Set active sheet of the workbook.
+		xlsx.SetActiveSheet(index)
+
+		// Save spreadsheet by the given path.
+		if err := xlsx.SaveAs("storage/" + exportRequest.FileName + ".xlsx"); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while save file"})
+			return
+		}
+	}
+
+	// Set the file path to the file you want to serve for download
+	filePath := "storage/" + exportRequest.FileName + "." + exportTo
+
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "error while open file"})
+		return
+	}
+
+	defer file.Close()
+
+	// Get the file information
+	fileInfo, err := file.Stat()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while get file info"})
+		return
+	}
+
+	// Set the response headers
+	ctx.Header("Content-Disposition", "attachment; filename="+fileInfo.Name())
+	ctx.Header("Content-Type", "application/octet-stream")
+	ctx.Header("Content-Length", fmt.Sprint(fileInfo.Size()))
+
+	// Stream the file content as the response body
+	http.ServeContent(ctx.Writer, ctx.Request, fileInfo.Name(), fileInfo.ModTime(), file)
 }
 
 func (ctrl *FileController) RessErr(ctx *gin.Context, err error) {
