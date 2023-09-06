@@ -349,6 +349,8 @@ type Heading struct {
 }
 
 func (ctrl *FileController) Export(ctx *gin.Context) {
+	exportFolder, _ := config.ReadConfig("filesystems.export_folder")
+
 	exportTo := ctx.Query("export_to")
 	if !(exportTo == "xlsx" || exportTo == "csv") {
 		ctrl.RessErr(ctx, errors.New("invalid export type, only support either xlsx or csv"))
@@ -364,7 +366,7 @@ func (ctrl *FileController) Export(ctx *gin.Context) {
 
 	if exportTo == "csv" {
 		// Create a CSV writer.
-		csvFileName := "storage/" + exportRequest.FileName + ".csv"
+		csvFileName := exportFolder + "/" + exportRequest.FileName + ".csv"
 		file, err := os.Create(csvFileName)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while create a csv writer"})
@@ -432,14 +434,14 @@ func (ctrl *FileController) Export(ctx *gin.Context) {
 		xlsx.SetActiveSheet(index)
 
 		// Save spreadsheet by the given path.
-		if err := xlsx.SaveAs("storage/" + exportRequest.FileName + ".xlsx"); err != nil {
+		if err := xlsx.SaveAs(exportFolder + "/" + exportRequest.FileName + ".xlsx"); err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while save file"})
 			return
 		}
 	}
 
 	// Set the file path to the file you want to serve for download
-	filePath := "storage/" + exportRequest.FileName + "." + exportTo
+	filePath := exportFolder + "/" + exportRequest.FileName + "." + exportTo
 
 	// Open the file
 	file, err := os.Open(filePath)

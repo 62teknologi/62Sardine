@@ -13,6 +13,7 @@ type Config struct {
 	HTTPServerAddress        string `mapstructure:"HTTP_SERVER_ADDRESS"`
 	FILESYSTEM_DISK          string `mapstructure:"FILESYSTEM_DISK"`
 	FILESYSTEM_FOLDER        string `mapstructure:"FILESYSTEM_FOLDER"`
+	EXPORT_FOLDER            string `json:"EXPORT_FOLDER"`
 	APP_URL                  string `mapstructure:"APP_URL"`
 	AWS_ACCESS_KEY_ID        string `mapstructure:"AWS_ACCESS_KEY_ID"`
 	AWS_ACCESS_KEY_SECRET    string `mapstructure:"AWS_ACCESS_KEY_SECRET"`
@@ -74,6 +75,7 @@ func ReadConfig(name string) (string, error) {
 
 				"default":        config.FILESYSTEM_DISK,
 				"default_folder": config.FILESYSTEM_FOLDER,
+				"export_folder":  config.EXPORT_FOLDER,
 
 				// Filesystem Disks
 
