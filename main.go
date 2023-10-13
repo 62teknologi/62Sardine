@@ -25,12 +25,14 @@ func main() {
 	apiV1 := r.Group("/api/v1")
 	{
 		c := &controllers.FileController{}
+		ec := &controllers.ExportController{}
 		r := apiV1
 
 		r.GET("/files", c.FindAll)
 		r.POST("/files", c.Upload)
 		r.DELETE("/files", c.Delete)
-		r.POST("/export", c.Export)
+		r.POST("/export", ec.Export)
+		r.POST("/export-pdf", ec.ExportPDF)
 		r.GET("/temporary-url", c.TempUrl)
 
 	}
