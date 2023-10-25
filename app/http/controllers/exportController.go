@@ -255,6 +255,8 @@ func (r *ExportPDFRequest) GeneratePDF(pdfPath string, args []string) (bool, err
 }
 
 func (ctrl *ExportController) ExportPDF(ctx *gin.Context) {
+	exportFolder, _ := config.ReadConfig("filesystems.export_folder")
+
 	var request ExportPDFRequest
 	if err := ctx.BindJSON(&request); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error while get request data: " + err.Error()})
@@ -265,7 +267,7 @@ func (ctrl *ExportController) ExportPDF(ctx *gin.Context) {
 	templatePath := "./public/" + request.Template
 
 	//path for download pdf
-	outputPath := "./storage/" + request.OutputName + ".pdf"
+	outputPath := exportFolder + "/" + request.OutputName + ".pdf"
 
 	if err := request.ParseTemplate(templatePath, request.Data); err == nil {
 
