@@ -199,7 +199,11 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 		defer srcFile.Close()
 
 		// Decode the uploaded image.
-		img, _, _ := image.Decode(srcFile)
+		img, _, err := image.Decode(srcFile)
+		if err != nil {
+			ctrl.ResErr(ctx, err)
+			return
+		}
 		width := img.Bounds().Dx()
 		height := img.Bounds().Dy()
 
