@@ -52,6 +52,7 @@ curl --location 'http://localhost:10082/api/v1/files' \
     "disk": "local",
     "extension": "jpg",
     "file_name": "my_custom_name",
+    "full_url": "http://localhost:8000/storage/app/sardine-test/test-folder/my_custom_name.jpg",
     "more_info": {
       "height": 1350,
       "width": 1080
