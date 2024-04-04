@@ -317,9 +317,17 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 		fileName = fileName + "." + extension
 	}
 
+	url := fs.Url(resultPath)
+	fullUrl := url
+
+	if defaultDisk != "local" {
+		fullUrl = fs.Url(bucketName + "/" + resultPath)
+	}
+
 	responseData := gin.H{
 		"data": map[string]any{
-			"url":                       fs.Url(resultPath),
+			"full_url":                  fullUrl,
+			"url":                       url,
 			"path":                      resultPath,
 			"file_name":                 fileName,
 			"size":                      size,
