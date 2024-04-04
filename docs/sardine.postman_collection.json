@@ -1,9 +1,9 @@
 {
 	"info": {
-		"_postman_id": "66c50010-f507-4c0e-8d6a-2edeabaa0f4c",
+		"_postman_id": "c477b1b9-6501-4157-bba1-dd336e810c1a",
 		"name": "Sardine",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "26338431"
+		"_exporter_id": "26029035"
 	},
 	"item": [
 		{
@@ -95,6 +95,27 @@
 									"key": "file_name",
 									"value": "test",
 									"type": "text"
+								},
+								{
+									"key": "accept",
+									"value": "image/*",
+									"description": "image/jpg, image/png, application/pdf",
+									"type": "text"
+								},
+								{
+									"key": "resize_width",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "resize_height",
+									"value": "",
+									"type": "text"
+								},
+								{
+									"key": "compress",
+									"value": "",
+									"type": "text"
 								}
 							]
 						},
@@ -109,7 +130,7 @@
 						}
 					},
 					"_postman_previewlanguage": "json",
-					"header": null,
+					"header": [],
 					"cookie": [],
 					"body": "{\n    \"data\": {\n        \"bucket\": \"enamdua-dev-bucket\",\n        \"client_original_extention\": \"jpeg\",\n        \"client_original_name\": \"1b3eb9fc181288cf391df06cb52d9caa.jpeg\",\n        \"content_type\": \"image/jpeg\",\n        \"disk\": \"gcs\",\n        \"extension\": \"jpg\",\n        \"path\": \"sardine-services/test-folder/user-7.jpeg\",\n        \"size\": 27019,\n        \"url\": \"https://storage.googleapis.com/enamdua-dev-bucket/sardine-services/test-folder/user-7.jpeg\"\n    }\n}"
 				}
@@ -159,7 +180,7 @@
 						}
 					},
 					"_postman_previewlanguage": "json",
-					"header": null,
+					"header": [],
 					"cookie": [],
 					"body": "{\n    \"data\": {\n        \"success\": true\n    }\n}"
 				}
@@ -209,7 +230,7 @@
 						}
 					},
 					"_postman_previewlanguage": "json",
-					"header": null,
+					"header": [],
 					"cookie": [],
 					"body": "{\n    \"data\": [\n        \"sardine-services/test-folder/user-6.jpeg\",\n        \"sardine-services/test-folder/user-7.jpeg\"\n    ]\n}"
 				}
@@ -271,7 +292,7 @@
 						}
 					},
 					"_postman_previewlanguage": "json",
-					"header": null,
+					"header": [],
 					"cookie": [],
 					"body": "{\n    \"data\": {\n        \"url\": \"https://storage.googleapis.com/enamdua-dev-bucket/sardine-services/test-folder/user-7.jpeg?Expires=1683906023&GoogleAccessId=dev62tek%40teknologi-proj.iam.gserviceaccount.com&Signature=AmcFJP5qQPrKJGAZnJvjluTpU3BAggra0%2B5dttnhMaiApM8oz%2BmwGWfp%2FJ9iXViItMFq8Tfii%2F2S%2BqUPh2y65Aq9ihaioJn7tC1vr3qbSND1%2FvmsIRcCl5yG3ZcSdLnqL8guknaHWOlmRv5xZcAPFuJLdi7v1qwr2GUWj7Gj%2FFc9p5zfw1%2FEqObZsTfNRJdZk1p%2F%2FKLLP6Dd%2Fy91T0ZPe%2FO%2BACxwstEGgKdxROY2KFr3elavIaMGw6cRiwp8UDZWAvkAgpItLB8xYUjM%2FzSBbwcSoUU533JIv1eNqWObbTeQJnOx1PuwbwkTSIE8awoXP01bBPxnTr1tMEXRqLLwnA%3D%3D\"\n    }\n}"
 				}
