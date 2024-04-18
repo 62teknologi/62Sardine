@@ -193,13 +193,30 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 
 	moreInfo := make(map[string]any)
 	contentType := file.Header.Get("Content-Type")
+
+	accept := ctx.PostForm("accept")
+	if accept != "" {
+		if !IsAccepted(contentType, accept) {
+			ctrl.ResErrStr(ctx, "Unknown file format.")
+			return
+		}
+	}
+
 	if strings.Contains(contentType, "image") {
 		// Open the uploaded file.
-		srcFile, _ := file.Open()
+		srcFile, err := file.Open()
+		if err != nil {
+			ctrl.ResErr(ctx, err)
+			return
+		}
 		defer srcFile.Close()
 
 		// Decode the uploaded image.
-		img, _, _ := image.Decode(srcFile)
+		img, _, err := image.Decode(srcFile)
+		if err != nil {
+			ctrl.ResErr(ctx, err)
+			return
+		}
 		width := img.Bounds().Dx()
 		height := img.Bounds().Dy()
 
@@ -300,9 +317,17 @@ func (ctrl *FileController) Upload(ctx *gin.Context) {
 		fileName = fileName + "." + extension
 	}
 
+	url := fs.Url(resultPath)
+	fullUrl := url
+
+	if defaultDisk != "local" {
+		fullUrl = fs.Url(bucketName + "/" + resultPath)
+	}
+
 	responseData := gin.H{
 		"data": map[string]any{
-			"url":                       fs.Url(resultPath),
+			"full_url":                  fullUrl,
+			"url":                       url,
 			"path":                      resultPath,
 			"file_name":                 fileName,
 			"size":                      size,
@@ -338,4 +363,29 @@ func (ctrl *FileController) ResErr(ctx *gin.Context, err error) {
 	ctx.JSON(http.StatusBadRequest, gin.H{
 		"error": err.Error(),
 	})
+}
+
+func (ctrl *FileController) ResErrStr(ctx *gin.Context, err string) {
+	ctx.JSON(http.StatusBadRequest, gin.H{
+		"error": err,
+	})
+}
+
+func IsAccepted(fileType string, accept string) bool {
+	for _, strType := range strings.Split(accept, ",") {
+		strType = strings.Trim(strType, " ")
+		arrType := strings.Split(strType, "/")
+		if len(arrType) > 1 {
+			if arrType[1] == "*" {
+				if arrType[0] == strings.Split(fileType, "/")[0] {
+					return true
+				}
+			}
+		}
+
+		if fileType == strType {
+			return true
+		}
+	}
+	return false
 }
