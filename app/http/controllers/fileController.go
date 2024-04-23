@@ -184,161 +184,31 @@ func (ctrl *FileController) FindAll(ctx *gin.Context) {
 }
 
 func (ctrl *FileController) Upload(ctx *gin.Context) {
+	multiple := ctx.Query("multiple")
+	var responseData map[string]any
 
-	file, err := ctx.FormFile("file")
-	if err != nil {
-		ctrl.ResErr(ctx, err)
-		return
-	}
+	if multiple == "1" {
+		form, _ := ctx.MultipartForm()
+		files := form.File["file"]
+		var items []interface{}
 
-	moreInfo := make(map[string]any)
-	contentType := file.Header.Get("Content-Type")
-
-	accept := ctx.PostForm("accept")
-	if accept != "" {
-		if !IsAccepted(contentType, accept) {
-			ctrl.ResErrStr(ctx, "Unknown file format.")
-			return
-		}
-	}
-
-	if strings.Contains(contentType, "image") {
-		// Open the uploaded file.
-		srcFile, err := file.Open()
-		if err != nil {
-			ctrl.ResErr(ctx, err)
-			return
-		}
-		defer srcFile.Close()
-
-		// Decode the uploaded image.
-		img, _, err := image.Decode(srcFile)
-		if err != nil {
-			ctrl.ResErr(ctx, err)
-			return
-		}
-		width := img.Bounds().Dx()
-		height := img.Bounds().Dy()
-
-		moreInfo["width"] = width
-		moreInfo["height"] = height
-
-		if ctx.PostForm("resize_width") != "" || ctx.PostForm("resize_height") != "" {
-			name := str.Random(40) + ".jpg"
-			file, err = ResizeImage(ctx, *file, ctx.PostForm("resize_width"), ctx.PostForm("resize_height"), name)
-			if err != nil {
-				ctrl.ResErr(ctx, err)
-				return
-			}
-			defer os.Remove(name)
-
-			if ctx.PostForm("resize_width") != "" {
-				moreInfo["width"] = ctx.PostForm("resize_width")
-			}
-
-			if ctx.PostForm("resize_height") != "" {
-				moreInfo["height"] = ctx.PostForm("resize_height")
-			}
+		for _, file := range files {
+			items = append(items, SaveUploadedFile(ctrl, ctx, file))
 		}
 
-		if ctx.PostForm("compress") != "" {
-			name := str.Random(40) + ".jpg"
-			file, err = CompressImage(file, ctx.PostForm("compress"), name)
-			if err != nil {
-				ctrl.ResErr(ctx, err)
-				return
-			}
-			defer os.Remove(name)
+		responseData = gin.H{
+			"data": items,
 		}
-	}
-
-	c, err := filesystem.NewFileFromRequest(file)
-	if err != nil {
-		ctrl.ResErr(ctx, err)
-		return
-	}
-
-	fs := filesystem.NewStorage(file.Header.Get("Content-Type"), ctx.PostForm("visibility"))
-
-	folder, _ := config.ReadConfig("filesystems.default_folder")
-
-	fileName := ctx.PostForm("file_name")
-	var resultPath string
-
-	path := folder + "/" + ctx.PostForm("folder")
-
-	isRandom := false
-	if fileName == "" {
-		isRandom = true
-		fileName = str.Random(40)
-		fullPath, err := filesystem.GetFullPathOfFile(path, c, fileName)
-
+	} else {
+		file, err := ctx.FormFile("file")
 		if err != nil {
 			ctrl.ResErr(ctx, err)
 			return
 		}
 
-		isExist := fs.Exists(fullPath)
-		if isExist {
-			ctrl.ResErr(ctx, errors.New("file already exist"))
-			return
+		responseData = gin.H{
+			"data": SaveUploadedFile(ctrl, ctx, file),
 		}
-	}
-
-	resultPath, err = fs.PutFileAs(path, c, fileName)
-
-	if err != nil {
-		ctrl.ResErr(ctx, err)
-		return
-	}
-
-	size, err := fs.Size(resultPath)
-	if err != nil {
-		ctrl.ResErr(ctx, err)
-		return
-	}
-
-	ext, err := c.Extension()
-	if err != nil {
-		ctrl.ResErr(ctx, err)
-		return
-	}
-
-	defaultDisk, _ := config.ReadConfig("filesystems.default")
-	bucketName, _ := config.ReadConfig(fmt.Sprintf("filesystems.disks.%s.bucket", defaultDisk))
-
-	if isRandom {
-		extension, err := sfile.Extension(c.File(), true)
-		if err != nil {
-			ctrl.ResErr(ctx, err)
-			return
-		}
-
-		fileName = fileName + "." + extension
-	}
-
-	url := fs.Url(resultPath)
-	fullUrl := url
-
-	if defaultDisk != "local" {
-		fullUrl = fs.Url(bucketName + "/" + resultPath)
-	}
-
-	responseData := gin.H{
-		"data": map[string]any{
-			"full_url":                  fullUrl,
-			"url":                       url,
-			"path":                      resultPath,
-			"file_name":                 fileName,
-			"size":                      size,
-			"content_type":              file.Header.Get("Content-Type"),
-			"extension":                 ext,
-			"bucket":                    bucketName,
-			"client_original_extention": c.GetClientOriginalExtension(),
-			"client_original_name":      c.GetClientOriginalName(),
-			"disk":                      defaultDisk,
-			"more_info":                 moreInfo,
-		},
 	}
 
 	ctx.JSON(http.StatusOK, responseData)
@@ -388,4 +258,151 @@ func IsAccepted(fileType string, accept string) bool {
 		}
 	}
 	return false
+}
+
+func SaveUploadedFile(ctrl *FileController, ctx *gin.Context, file *multipart.FileHeader) map[string]any {
+	moreInfo := make(map[string]any)
+	contentType := file.Header.Get("Content-Type")
+	empty := gin.H{}
+
+	accept := ctx.PostForm("accept")
+	if accept != "" {
+		if !IsAccepted(contentType, accept) {
+			ctrl.ResErrStr(ctx, "Unknown file format.")
+			return empty
+		}
+	}
+
+	if strings.Contains(contentType, "image") {
+		// Open the uploaded file.
+		srcFile, err := file.Open()
+		if err != nil {
+			ctrl.ResErr(ctx, err)
+			return empty
+		}
+		defer srcFile.Close()
+
+		// Decode the uploaded image.
+		img, _, _ := image.DecodeConfig(srcFile)
+		width := img.Width
+		height := img.Height
+
+		moreInfo["width"] = width
+		moreInfo["height"] = height
+
+		if ctx.PostForm("resize_width") != "" || ctx.PostForm("resize_height") != "" {
+			name := str.Random(40) + ".jpg"
+			file, err = ResizeImage(ctx, *file, ctx.PostForm("resize_width"), ctx.PostForm("resize_height"), name)
+			if err != nil {
+				ctrl.ResErr(ctx, err)
+				return empty
+			}
+			defer os.Remove(name)
+
+			if ctx.PostForm("resize_width") != "" {
+				moreInfo["width"] = ctx.PostForm("resize_width")
+			}
+
+			if ctx.PostForm("resize_height") != "" {
+				moreInfo["height"] = ctx.PostForm("resize_height")
+			}
+		}
+
+		if ctx.PostForm("compress") != "" {
+			name := str.Random(40) + ".jpg"
+			file, err = CompressImage(file, ctx.PostForm("compress"), name)
+			if err != nil {
+				ctrl.ResErr(ctx, err)
+				return empty
+			}
+			defer os.Remove(name)
+		}
+	}
+
+	c, err := filesystem.NewFileFromRequest(file)
+	if err != nil {
+		ctrl.ResErr(ctx, err)
+		return empty
+	}
+
+	fs := filesystem.NewStorage(file.Header.Get("Content-Type"), ctx.PostForm("visibility"))
+
+	folder, _ := config.ReadConfig("filesystems.default_folder")
+
+	fileName := ctx.PostForm("file_name")
+	var resultPath string
+
+	path := folder + "/" + ctx.PostForm("folder")
+
+	isRandom := false
+	if fileName == "" {
+		isRandom = true
+		fileName = str.Random(40)
+		fullPath, err := filesystem.GetFullPathOfFile(path, c, fileName)
+
+		if err != nil {
+			ctrl.ResErr(ctx, err)
+			return empty
+		}
+
+		isExist := fs.Exists(fullPath)
+		if isExist {
+			ctrl.ResErr(ctx, errors.New("file already exist"))
+			return empty
+		}
+	}
+
+	resultPath, err = fs.PutFileAs(path, c, fileName)
+
+	if err != nil {
+		ctrl.ResErr(ctx, err)
+		return empty
+	}
+
+	size, err := fs.Size(resultPath)
+	if err != nil {
+		ctrl.ResErr(ctx, err)
+		return empty
+	}
+
+	ext, err := c.Extension()
+	if err != nil {
+		ctrl.ResErr(ctx, err)
+		return empty
+	}
+
+	defaultDisk, _ := config.ReadConfig("filesystems.default")
+	bucketName, _ := config.ReadConfig(fmt.Sprintf("filesystems.disks.%s.bucket", defaultDisk))
+
+	if isRandom {
+		extension, err := sfile.Extension(c.File(), true)
+		if err != nil {
+			ctrl.ResErr(ctx, err)
+			return empty
+		}
+
+		fileName = fileName + "." + extension
+	}
+
+	url := fs.Url(resultPath)
+	fullUrl := url
+
+	if defaultDisk != "local" {
+		fullUrl = fs.Url(bucketName + "/" + resultPath)
+	}
+
+	return map[string]any{
+		"full_url":                  fullUrl,
+		"url":                       url,
+		"path":                      resultPath,
+		"file_name":                 fileName,
+		"size":                      size,
+		"content_type":              file.Header.Get("Content-Type"),
+		"extension":                 ext,
+		"bucket":                    bucketName,
+		"client_original_extention": c.GetClientOriginalExtension(),
+		"client_original_name":      c.GetClientOriginalName(),
+		"disk":                      defaultDisk,
+		"more_info":                 moreInfo,
+	}
 }
