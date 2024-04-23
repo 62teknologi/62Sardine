@@ -68,7 +68,7 @@
 			},
 			"response": [
 				{
-					"name": "Upload",
+					"name": "Single Upload",
 					"originalRequest": {
 						"method": "POST",
 						"header": [],
@@ -126,6 +126,80 @@
 							],
 							"path": [
 								"files"
+							]
+						}
+					},
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"data\": {\n        \"bucket\": \"enamdua-dev-bucket\",\n        \"client_original_extention\": \"jpeg\",\n        \"client_original_name\": \"1b3eb9fc181288cf391df06cb52d9caa.jpeg\",\n        \"content_type\": \"image/jpeg\",\n        \"disk\": \"gcs\",\n        \"extension\": \"jpg\",\n        \"path\": \"sardine-services/test-folder/user-7.jpeg\",\n        \"size\": 27019,\n        \"url\": \"https://storage.googleapis.com/enamdua-dev-bucket/sardine-services/test-folder/user-7.jpeg\"\n    }\n}"
+				},
+				{
+					"name": "Multiple Upload",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [
+										"postman-cloud:///1eefe1ed-d0ce-4d70-a73a-ddd279613592",
+										"postman-cloud:///1eef0ac3-0615-43b0-b82f-532bcdc2c8fb"
+									]
+								},
+								{
+									"key": "visibility",
+									"value": "public",
+									"description": "public|private",
+									"type": "text"
+								},
+								{
+									"key": "folder",
+									"value": "multiple",
+									"type": "text"
+								},
+								{
+									"key": "accept",
+									"value": "image/*",
+									"description": "image/jpg, image/png, application/pdf",
+									"type": "text"
+								},
+								{
+									"key": "resize_width",
+									"value": "",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "resize_height",
+									"value": "",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "compress",
+									"value": "",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/files?multiple=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"files"
+							],
+							"query": [
+								{
+									"key": "multiple",
+									"value": "1"
+								}
 							]
 						}
 					},
